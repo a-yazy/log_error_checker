@@ -1,0 +1,23 @@
+{
+    "manifest_version": 3,
+    "name": "Log & Error Checker",
+    "description": "ページでエラーが発生したり、ログが出力されたりした場合に、画面上に通知を行います。",
+    "version": "1.0.0",
+    "icons": {
+        "128": "/icons/icon_128.png"
+    },
+    "permissions": ["tabs", "debugger", "storage", "webNavigation", "scripting"],
+    "host_permissions": ["https://*/", "http://*/"],
+    "action": {
+        "default_title": "Log & Error Checker",
+        "default_popup": "/popup/popup.html"
+    },
+    "web_accessible_resources": [{
+        "resources": ["/contents/*","/util/*"],
+        "matches": ["https://*/*", "http://*/*"]
+    }],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    }
+}
