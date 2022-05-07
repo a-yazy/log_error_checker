@@ -3,43 +3,31 @@ div.logErrorCheckerResult {
     z-index: 2147483647;
 	top: 8px;
 	left: 8px;
-	width: 100vw;
 	background-color: #F00;
 	opacity: 1;
 	cursor: pointer;
 	width: fit-content;
+	max-width: 90%;
 	border-radius: 8px;
 	padding: 4px;
 }
 div.logErrorCheckerResult * {
 	color: #FFF;
 }
-
 div.logErrorCheckerResult__info {
-	display: flex;
-	justify-content: flex-end;
+	max-height: 50vh;
+	overflow: auto;
 }
 div.logErrorCheckerResult__log {
-	flex: 1 1 300px;
 	padding: 8px;
 	margin: 8px;
 	border: dotted 1px #FFF;
 	font-size: 14px;
 }
+div.logErrorCheckerResult__log:hover {
+	border: solid 1px #FFF;
+}
 div.logErrorCheckerResult__msg {
 	font-size: 12px;
 	padding: 8px;
-}
-div.logErrorCheckerResult__close {
-	flex: 0 0 20px;
-	padding: 0;
-	font-weight: bold;
-	font-size: 16px;
-	text-align: center;
-}
-div.logErrorCheckerResult__close:hover {
-	text-decoration: underline;
-	position: relative;
-	top: 1px;
-	left: 1px;
 }

@@ -18,6 +18,43 @@
         try {
             const logInfo = message;
 
+            // 出力パネル
+            let container = document.querySelector(".logErrorCheckerResult");
+            if (!container) {
+
+                // templateを作成
+                const template = document.createElement("template");
+                template.innerHTML =
+                    `<div class="logErrorCheckerResult">
+                        <div class="logErrorCheckerResult__info">
+                        </div>
+                        <div class="logErrorCheckerResult__msg">
+                            この通知は Log & Error Checker が出しています。<br>
+                            通知を出したくない場合は、拡張機能「Log & Error Checker」を無効にしてください。<br>
+                            ダブルクリックでこの通知を閉じます。<br>
+                        </div>
+                    </div>`;
+
+                // templateを複製
+                const divFragment = template.content.cloneNode(true);
+
+                // documentに追加
+                document.body.prepend(divFragment);
+                container = document.querySelector(".logErrorCheckerResult");
+
+                // イベントリスナ追加
+                container.addEventListener("dblclick", (e) => {
+                    const logPanel = e.target.closest(".logErrorCheckerResult__log");
+                    if (logPanel) {
+                        // 個別のメッセージがクリックされた場合、メッセージを削除
+                        logPanel.remove();
+                    } else {
+                        // 個別のメッセージ以外がクリックされた場合、全体を削除
+                        container.remove();
+                    }
+                });
+            }
+
             // ログ内容
             let logMessage = "";
             if (logInfo["level"] === "exception") {
@@ -25,35 +62,10 @@
             } else {
                 logMessage = `${logInfo["level"]} ログが出力されました。<br>${logInfo["message"]}`
             }
+            const msgHtml = `<div class="logErrorCheckerResult__log" title="ダブルクリックでこのログを消します。">${logMessage}</div>`;
 
-            // templateを作成
-            const template = document.createElement("template");
-            template.innerHTML =
-                `<div class="logErrorCheckerResult">
-                    <div class="logErrorCheckerResult__info">
-                        <div class="logErrorCheckerResult__log">
-                            ${logMessage}
-                        </div>
-                        <div class="logErrorCheckerResult__close">×</div>
-                    </div>
-                    <div class="logErrorCheckerResult__msg">
-                        この通知は Log & Error Checker が出しています。<br>
-                        通知を出したくない場合は、拡張機能「Log & Error Checker」を無効にしてください。
-                    </div>
-                </div>`;
-
-            // templateを複製
-            const divFragment = template.content.cloneNode(true);
-
-            // documentに追加
-            document.body.prepend(divFragment);
-
-            // イベントリスナ追加
-            const closeLink = document.querySelector(".logErrorCheckerResult__close");
-
-            closeLink.addEventListener("click", (e) => {
-                e.currentTarget.closest(".logErrorCheckerResult")?.remove();
-            });
+            // ログ内容追加
+            container.querySelector(".logErrorCheckerResult__info").insertAdjacentHTML("afterbegin", msgHtml);
 
             sendResponse();
             return;
