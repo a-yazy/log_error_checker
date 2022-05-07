@@ -1,6 +1,6 @@
 /* 変数 */
 :root {
-    --innter-width: 90%;
+    --inner-width: 90%;
     --theme-color: #EB3349;
     --light-gray: #CCC;
     --gray: #999;
@@ -22,7 +22,7 @@ html, body {
     background: var(--theme-color);
 }
 .header__inner {
-    width: var(--innter-width);
+    width: var(--inner-width);
     margin: 0 auto;
 }
 .header__title {
@@ -36,7 +36,7 @@ html, body {
     width: 100%;
 }
 .main__inner {
-    width: var(--innter-width);
+    width: var(--inner-width);
     margin: 1em auto;
 }
 
