@@ -118,7 +118,7 @@ import Util from "/util/util.js"
             // await chrome.debugger.sendCommand({"tabId": tab.id}, "Audits.enable");
 
         } catch (error) {
-            console.log(`An error occured in chrome.webNavigation.onCompleted.addListener : ${error} ${tab?.id}`)
+            console.log(`An error occured in chrome.webNavigation.onCompleted.addListener : ${error}`)
         }
     }
 
