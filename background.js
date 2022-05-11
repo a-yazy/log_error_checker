@@ -11,7 +11,7 @@ import Util from "/util/util.js"
     const filter = {
         url: [
             {
-                urlMatches: 'https://*',
+                urlContains: 'https://*',
             },
         ],
     };
@@ -20,66 +20,107 @@ import Util from "/util/util.js"
      * 指定ページ(filter)へのナビゲーション発生時イベントのリスナ
      */
     chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+        // デバッガの設定
+        setDebugger(details.tabId);
+    });
+    // }, filter);
 
-        // webページ以外の場合、何もしない
-        if (!details.url.startsWith("http")) {
-            return;
+    /**
+     * メッセージリスナ
+     */
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+
+        // コマンドに応じた処理
+        switch (message.command) {
+            case 'settings_changed':
+                // 設定変更
+                setDebugger();
         }
 
-        (async () => {
+        return true;
+    });
 
-            try {
-                // tab情報
-                // ※NOTE:
-                // chrome.tabs.getはcb関数を指定するとPromiseが返らず、try～await～catchでエラートラップできない
-                // cb関数なしのawaitで呼ぶとPromiseが返り、エラー時にexceptionがthrowされる状態になる
-                // chrome.runtime.lastError で確認できるエラーもthrow対象
-                const tabId = details.tabId;
-                const tab = await chrome.tabs.get(tabId);
+    /**
+     * デバッガの接続
+     * @param {*} tabId
+     * @returns なし
+     */
+    async function setDebugger(tabId = null) {
 
-                // url情報
-                // ※NOTE:
-                // chromeで新規タブを追加すると最初はアカウント情報を取りに行くhttp～のURLになる
-                // それも除外したいのでここで改めてタブのurl情報を確認している
-                const url = tab.url ?? tab.pendingUrl ?? "";
-                if (!url.startsWith("http")) {
-                    // webページ以外の場合、何もしない
-                    return;
-                }
-
-                // 設定値を取得
-                const settings = await Util.getStorage(Util.STRAGE_KEY);
-                if (settings.trapOnOff !== "on") {
-                    // ONではない場合、何もしない
-                    return;
-                }
-
-                // デバッガが接続されている対象を全て取得
-                const attachedTabs = await chrome.debugger.getTargets();
-
-                // 現在のタブに、デバッガが接続されているか確認
-                if (attachedTabs.some(attachedTab => attachedTab.tabId === tabId && attachedTab.attached)) {
-                    // すでにデバッガが接続されている場合、何もしない
-                    return;
-                }
-
-                // 現在のタブに、デバッガを接続
-                // ※NOTE:cb関数を指定しない理由はchrome.tabs.getと同じ
-                await chrome.debugger.attach({"tabId": tabId}, "1.3");
-
-                // デバッガにコマンドを送信
-                // ※NOTE:cb関数を指定しない理由はchrome.tabs.getと同じ
-                await chrome.debugger.sendCommand({"tabId": tabId}, "Log.enable");
-                await chrome.debugger.sendCommand({"tabId": tabId}, "Runtime.enable");
-
-            } catch (error) {
-                console.log(`An error occured in chrome.webNavigation.onCompleted.addListener : ${error} ${details.url}`)
+        try {
+            // tab情報
+            // ※NOTE:
+            // chrome.tabs.getはcb関数を指定するとPromiseが返らず、try～await～catchでエラートラップできない
+            // cb関数なしのawaitで呼ぶとPromiseが返り、エラー時にexceptionがthrowされる状態になる
+            // chrome.runtime.lastError で確認できるエラーもthrow対象
+            let tab = null;
+            if (tabId) {
+                // idが指定されている場合、そのidのtab
+                tab = await chrome.tabs.get(tabId);
+            } else {
+                // 指定がない場合、アクティブタブ
+                const activeTabs = await chrome.tabs.query({"active": true});
+                tab = activeTabs[0];
+            }
+            // 対象のtabが取得できない場合、何もしない
+            if (!tab) {
+                return;
             }
 
-        })();
+            // url情報
+            // ※NOTE:
+            // chromeで新規タブを追加すると最初はアカウント情報を取りに行くhttp～のURLになる
+            // それも除外したいのでここでタブのurl情報を確認している
+            const url = tab.url ?? tab.pendingUrl ?? "";
+            if (!url.startsWith("http")) {
+                // webページ以外の場合、何もしない
+                return;
+            }
 
-    // }, filter);
-    });
+            // 設定値を取得
+            const settings = await Util.getStorage(Util.STRAGE_KEY);
+
+            // デバッガが接続されている対象を全て取得
+            const attachedTabs = await chrome.debugger.getTargets();
+
+            // 現在のタブに、デバッガが接続されているか確認
+            const debuggerAttached = attachedTabs.some(attachedTab => attachedTab.tabId === tab.id && attachedTab.attached);
+
+            // 設定値とデバッガの接続状況を確認
+            if (debuggerAttached) {
+                // デバッガ接続済
+                if (settings.trapOnOff === "on") {
+                    // 設定値＝ON：何もしない
+                    return;
+                } else {
+                    // 設定値＝OFF：接続解除
+                    await chrome.debugger.detach({"tabId": tab.id});
+                    return;
+                }
+            } else {
+                // デバッガ未接続
+                if (settings.trapOnOff === "on") {
+                    // 設定値＝ON：接続処置を継続
+                } else {
+                    // 設定値＝OFF：何もしない
+                    return;
+                }
+            }
+
+            // 現在のタブに、デバッガを接続
+            await chrome.debugger.attach({"tabId": tab.id}, "1.3");
+
+            // デバッガにコマンドを送信
+            await chrome.debugger.sendCommand({"tabId": tab.id}, "Log.enable");
+            await chrome.debugger.sendCommand({"tabId": tab.id}, "Runtime.enable");
+            await chrome.debugger.sendCommand({"tabId": tab.id}, "Console.enable");
+            await chrome.debugger.sendCommand({"tabId": tab.id}, "Network.enable");
+            // await chrome.debugger.sendCommand({"tabId": tab.id}, "Audits.enable");
+
+        } catch (error) {
+            console.log(`An error occured in chrome.webNavigation.onCompleted.addListener : ${error} ${tab?.id}`)
+        }
+    }
 
     /**
      * デバッガーで発生するイベントのリスナ
@@ -102,24 +143,105 @@ import Util from "/util/util.js"
 
                 // 情報取得
                 switch (message) {
+                    case "Network.webSocketFrameError":
+                        // Fired when WebSocket message error occurs
+                        logInfo["level"] = "error";
+                        logInfo["message"] = `[${message}] ${params.errorMessage}`;
+
+                        console.log(`[${message} params=${params}`);
+                        break;
+
+                    case "Network.loadingFailed":
+                        // Fired when HTTP request has failed to load.
+                        logInfo["level"] = "error";
+                        logInfo["message"] = `[${message}] ${params.errorText}`;
+
+                        console.log(`[${message} params=${params}`);
+                        break;
+
+                    // case "Audits.issueAdded":
+                        // // リスク通知
+                        // logInfo["level"] = "info";
+                        // logInfo["message"] = `[${message}] ${params.issue.code}`;
+
+                        // console.log(`[${message} params=${params}`);
+                        // break;
+
+                    case "Runtime.consoleAPICalled":
+                        // コンソール呼び出し
+
+                        // ログレベル判定
+                        let logLevel = "info";
+                        if (params.type === "Debug") {
+                            logLevel = "verbose";
+                        } else if (params.type === "Error" || params.type === "Assert") {
+                            logLevel = "error";
+                        } else if (params.type === "Warning") {
+                            logLevel = "warning";
+                        } else if (params.type === "Info" || params.type === "Log") {
+                            logLevel = "info";
+                        }
+                        logInfo["level"] = logLevel;
+
+                        // ログメッセージ編集
+                        let logMessage = '';
+                        if (params.args.length && params.args[0].unserializableValue) {
+                            logMessage = params.args[0].unserializableValue;
+                        } else if (params.args.length && (typeof params.args[0].value !== 'object' || params.args[0].value === null)) {
+                            logMessage = String(params.args[0].value);
+                        } else if (params.args.length && params.args[0].description) {
+                            logMessage = params.args[0].description;
+                        }
+                        logInfo["message"] = `[${message}] ${logMessage}`;
+
+                        // 抽出対象ではない場合、何もしない
+                        if (!settings.trapLogLevels.includes(logInfo["level"])) {
+                            return;
+                        }
+
+                        console.log(`[${message} params=${params}`);
+                        break;
+
                     case "Runtime.exceptionThrown":
-                        // エラー
-                        const {timestamp, exceptionDetails} = params;
-                        logInfo["level"] = "exception";
-                        logInfo["message"] = exceptionDetails.exception.description;
-                        console.log(`params(${message})`, exceptionDetails.exception.description);
+                        // 例外
+
+                        // ログメッセージ編集処理
+                        getExceptionMessage = (exceptionDetails) => {
+                            if (exceptionDetails.exception)
+                                return (exceptionDetails.exception.description || exceptionDetails.exception.value);
+                            let message = exceptionDetails.text;
+                            if (exceptionDetails.stackTrace) {
+                                for (const callframe of exceptionDetails.stackTrace.callFrames) {
+                                    const location = callframe.url +
+                                        ':' +
+                                        callframe.lineNumber +
+                                        ':' +
+                                        callframe.columnNumber;
+                                    const functionName = callframe.functionName || '<anonymous>';
+                                    message += `\n    at ${functionName} (${location})`;
+                                }
+                            }
+                            return message;
+                        };
+
+                        logInfo["level"] = "error";
+                        logInfo["message"] = `[${message}] ${getExceptionMessage(params.exceptionDetails)}`;
+
+                        console.log(`[${message} params=${params}`);
                         break;
 
                     case "Log.entryAdded":
                         // ログ出力
-                        const {entry} = params;
-                        logInfo["level"] = entry.level;
-                        logInfo["message"] = entry.text;
-                        console.log(`params(${message})`, entry.text);
+
+                        logInfo["level"] = params.entry.level;
+                        logInfo["message"] = `[${message}] ${params.entry.text}`;
+
                         // 抽出対象ではない場合、何もしない
-                        if (!settings.trapLogLevels.includes(entry.level)) {
+                        if (!settings.trapLogLevels.includes(params.entry.level)) {
                             return;
                         }
+
+                        console.log(`[${message} params=${params}`);
                         break;
 
                     default:
@@ -173,4 +295,6 @@ import Util from "/util/util.js"
 // https://jablogs.com/detail/108075
 // https://github.com/markknol/console-log-viewer
 // https://stackoverflow.com/questions/19846078/how-to-read-from-chromes-console-in-javascript
+// https://developer.chrome.com/docs/extensions/reference/debugger/#method-sendCommand
+// https://blog.recruit.co.jp/rtc/2020/10/02/chromepatrol/
 // --------------------------------------------------

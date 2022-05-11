@@ -25,6 +25,19 @@ class Popup {
 
                 // 設定取得
                 this.#settings = await this.#Util.getStorage(this.#Util.STRAGE_KEY);
+
+                // アクティブタブを取得
+                const activeTabs = await chrome.tabs.query({"active": true, "currentWindow": true});
+                const tab = activeTabs[0];
+
+                // アクティブタブに、デバッガが接続されているか確認
+                const attachedTabs = await chrome.debugger.getTargets();
+                if (!attachedTabs.some(attachedTab => attachedTab.tabId === tab.id && attachedTab.attached)) {
+                    // 接続されていない場合、スイッチOFF表示
+                    // ※デバッガが手動でOFFにされた（一時的に無効になっているだけ）の場合は、ストレージの保存データは変更しない
+                    this.#settings.trapOnOff = "";
+                }
+
                 // 画面初期値
                 this.#setScreen();
 
@@ -64,6 +77,17 @@ class Popup {
 
         // 設定を保存
         this.#Util.setStorage(this.#Util.STRAGE_KEY, this.#settings);
+
+        // メッセージ送信
+        (async () => {
+            try {
+                // メッセージ送信(To:background)
+                await chrome.runtime.sendMessage({"command": "settings_changed"});
+            } catch (error) {
+                console.log(`An error occured in trapSettingsChanged : ${error}`)
+            }
+        })();
+
     }
 
 };

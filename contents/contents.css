@@ -19,10 +19,15 @@ div.logErrorCheckerResult__info {
 	overflow: auto;
 }
 div.logErrorCheckerResult__log {
+	position: relative;
 	padding: 8px;
+	padding-top: 2em;
 	margin: 8px;
 	border: dotted 1px #FFF;
-	font-size: 14px;
+	font-size: 13px;
+	background-color: #FFF;
+	border-radius: 4px;
+	color: #333;
 }
 div.logErrorCheckerResult__log:hover {
 	border: solid 1px #FFF;
@@ -30,4 +35,36 @@ div.logErrorCheckerResult__log:hover {
 div.logErrorCheckerResult__msg {
 	font-size: 12px;
 	padding: 8px;
+	font-weight: bolder;
+}
+div[class*="logErrorCheckerResult__level-"]::before {
+	position: absolute;
+	display: inline-block;
+	padding: 0 6px;
+	top: 3px;
+	left: 6px;
+	font-size: 11px;
+	font-weight: bold;
+	border-radius: 4px;
+}
+
+div.logErrorCheckerResult__level-error::before {
+	content: "error";
+	background-color: #F00;
+	color: #FFF;
+}
+div.logErrorCheckerResult__level-warning::before {
+	content: "warning";
+	background-color: #FF0;
+	color: #000;
+}
+div.logErrorCheckerResult__level-info::before {
+	content: "info";
+	background-color: #CCC;
+	color: #000;
+}
+div.logErrorCheckerResult__level-verbose::before {
+	content: "verbose";
+	border-left: solid 5px #AAA;
+	color: #FFF;
 }

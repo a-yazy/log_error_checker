@@ -29,9 +29,10 @@
                         <div class="logErrorCheckerResult__info">
                         </div>
                         <div class="logErrorCheckerResult__msg">
-                            この通知は Log & Error Checker が出しています。<br>
-                            通知を出したくない場合は、拡張機能「Log & Error Checker」を無効にしてください。<br>
-                            ダブルクリックでこの通知を閉じます。<br>
+                            ページのログの一部を「Log & Error Checker」が表示しています。<br>
+                            気になるログがあったら、開発者ツールで具体的な内容をご確認ください。（メッセージは一致しない場合があります）<br>
+                            この通知を表示したくない場合は、拡張機能「Log & Error Checker」を無効にしてください。<br>
+                            ダブルクリックで通知を閉じます。<br>
                         </div>
                     </div>`;
 
@@ -56,13 +57,7 @@
             }
 
             // ログ内容
-            let logMessage = "";
-            if (logInfo["level"] === "exception") {
-                logMessage = `エラーが発生しました。<br>${logInfo["message"]}`;
-            } else {
-                logMessage = `${logInfo["level"]} ログが出力されました。<br>${logInfo["message"]}`
-            }
-            const msgHtml = `<div class="logErrorCheckerResult__log" title="ダブルクリックでこのログを消します。">${logMessage}</div>`;
+            const msgHtml = `<div class="logErrorCheckerResult__log logErrorCheckerResult__level-${logInfo["level"]}" title="ダブルクリックでこのログを消します。">${logInfo["message"]}</div>`;
 
             // ログ内容追加
             container.querySelector(".logErrorCheckerResult__info").insertAdjacentHTML("afterbegin", msgHtml);
