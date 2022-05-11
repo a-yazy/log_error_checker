@@ -19,9 +19,9 @@ import Util from "/util/util.js"
     /**
      * 指定ページ(filter)へのナビゲーション発生時イベントのリスナ
      */
-    chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+    chrome.webNavigation.onCommitted.addListener((details) => {
         // デバッガの設定
-        setDebugger(details.tabId);
+        setDebugger(details.tabId, details.url);
     });
     // }, filter);
 
@@ -43,9 +43,10 @@ import Util from "/util/util.js"
     /**
      * デバッガの接続
      * @param {*} tabId
+     * @param {*} url
      * @returns なし
      */
-    async function setDebugger(tabId = null) {
+    async function setDebugger(tabId = null, url = null) {
 
         try {
             // tab情報
@@ -69,10 +70,11 @@ import Util from "/util/util.js"
 
             // url情報
             // ※NOTE:
+            // chrome://extensions/等、chrome独自ページを排除
             // chromeで新規タブを追加すると最初はアカウント情報を取りに行くhttp～のURLになる
             // それも除外したいのでここでタブのurl情報を確認している
-            const url = tab.url ?? tab.pendingUrl ?? "";
-            if (!url.startsWith("http")) {
+            const targetUrl = url ?? tab.url ?? tab.pendingUrl ?? "";
+            if (!targetUrl.startsWith("http")) {
                 // webページ以外の場合、何もしない
                 return;
             }
@@ -118,7 +120,7 @@ import Util from "/util/util.js"
             // await chrome.debugger.sendCommand({"tabId": tab.id}, "Audits.enable");
 
         } catch (error) {
-            console.log(`An error occured in chrome.webNavigation.onCompleted.addListener : ${error}`)
+            console.log(`An error occured in setDebugger : ${error}`)
         }
     }
 
